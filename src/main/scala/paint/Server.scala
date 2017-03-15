@@ -30,10 +30,10 @@ object Server {
           case TextMessage.Strict(text) =>
             evStore ! text
             User.IncomingMessage(text)
-        }.to(Sink.actorRef[User.IncomingMessage](userActor, PoisonPill))
+        }.to(Sink.actorRef[User.IncomingMessage](userActor, Shutdown))
 
       val outgoingMessages: Source[Message, NotUsed] =
-        Source.actorRef[User.OutgoingMessage](1000, OverflowStrategy.fail)
+        Source.actorRef[User.OutgoingMessage](10000, OverflowStrategy.fail)
           .mapMaterializedValue { outActor =>
             // give the user actor a way to send messages out
             userActor ! User.Connected(outActor)
@@ -49,6 +49,7 @@ object Server {
     }
 
     val route =
+      // TODO: surely there's a better way of serving static files
       path("jscolor.min.js") {
         getFromResource("jscolor.min.js")
       } ~

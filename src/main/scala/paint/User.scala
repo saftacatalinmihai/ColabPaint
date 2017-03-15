@@ -6,7 +6,7 @@ import scala.util.parsing.json.JSON
 
 object User {
   type Id = String
-  case class Connected(outgoing: ActorRef)
+  case class Connected(outActor: ActorRef)
   case class IncomingMessage(text: String)
   case class OutgoingMessage(text: String)
 }
@@ -16,8 +16,12 @@ class User(room: ActorRef) extends Actor {
   var name: String = ""
 
   def receive: Receive = {
-    case Connected(outgoing) =>
-      context.become(connected(outgoing))
+    case Connected(outActor) =>
+      context.become(connected(outActor))
+  }
+
+  def as(state: String): Receive = {
+    case a: String => context.become(as(a))
   }
 
   def connected(outgoing: ActorRef): Receive = {

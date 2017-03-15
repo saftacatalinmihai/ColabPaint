@@ -8,12 +8,19 @@ import scala.util.parsing.json.JSON
   */
 class EventStore extends Actor {
 
+  var canvases: List[List[(String, String)]] = List.empty
   var events: List[(String, String)] = List.empty
 
   override def receive: Receive = {
     case userActor: ActorRef => sendDrawEventsTo(userActor)
-    case event: String => events =
-      (JSON.parseFull(event).get.asInstanceOf[Map[String, Any]]("msgType").asInstanceOf[String], event) :: events
+    case event: String =>
+      val (msgType, ev) = (parseMsgType(event), event)
+      if (msgType == "reset ") {
+        canvases = events :: canvases
+        events = List.empty
+      } else {
+        events = (msgType, ev) :: events
+      }
   }
 
   private def sendDrawEventsTo(user: ActorRef): Unit = {
@@ -24,5 +31,7 @@ class EventStore extends Actor {
     user ! drawEvents.reverse.map(ev => Room.Message(ev._2))
 //    drawEvents.reverse.foreach(ev => user ! Room.Message(ev._2))
   }
+
+  def parseMsgType(event: String): String = JSON.parseFull(event).get.asInstanceOf[Map[String, Any]]("msgType").asInstanceOf[String]
 
 }

@@ -20,9 +20,12 @@ $(document).ready( function() {
 
     var ws = new WebSocket("ws://" + window.location.hostname + ":8080/paint");
     ws.onopen = function() {
-        $("#reset").submit(function( event ) {
-            alert( "Handler for .submit() called." );
-            event.preventDefault();
+        $("#reset").click(function() {
+            console.log( "Handler for .submit() called." );
+            ws.send(JSON.stringify({
+                "msgType": "reset",
+                "cursorOwner": getName()
+            }))
         });
         $("#nameInput").keyup(function(){
             nameText.text = this.value;
@@ -99,7 +102,7 @@ $(document).ready( function() {
                 app.stage.addChild(cursorGraphics);
                 cursors[cursorOwner] = {
                     "name": cursorNameText,
-                    "graphics": cursorGraphics,
+                    "graphics": graphics,
                     "down": false
                 };
             } else {

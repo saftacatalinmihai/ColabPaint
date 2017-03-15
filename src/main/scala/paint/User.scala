@@ -29,7 +29,6 @@ class User(room: ActorRef) extends Actor {
         room ! Room.Message(text)
 
       case messageList: List[Room.Message] =>
-        println("Sending bulk")
         outgoing ! OutgoingMessage(s"""{"msgType": "bulkDraw", "events": [${messageList.map(_.message).mkString(",")}]}""")
 
       case Room.Message(text) =>

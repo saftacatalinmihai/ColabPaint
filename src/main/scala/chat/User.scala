@@ -25,15 +25,20 @@ class User(chatRoom: ActorRef) extends Actor {
 
     {
       case IncomingMessage(text) =>
-        name = JSON.parseFull(text).get.asInstanceOf[Map[String, Any]]("cursorOwner").asInstanceOf[String]
+        name = cursorOwner(text)
         chatRoom ! Room.ChatMessage(text)
 
       case Room.ChatMessage(text) =>
-        outgoing ! OutgoingMessage(text)
+        if (cursorOwner(text) != name) {
+          outgoing ! OutgoingMessage(text)
+        }
 
       case Room.Disconnected(user: User) =>
         outgoing ! OutgoingMessage(s"""{"msgType": "disconnected", "cursorOwner": "${user.name}"}""")
     }
   }
 
+  private def cursorOwner(text: String) = {
+    JSON.parseFull(text).get.asInstanceOf[Map[String, Any]]("cursorOwner").asInstanceOf[String]
+  }
 }

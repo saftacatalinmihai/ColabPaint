@@ -46,6 +46,9 @@ object Server {
     }
 
     val route =
+      path("jscolor.min.js") {
+        getFromResource("jscolor.min.js")
+      } ~
       path("index.js") {
         getFromResource("index.js")
       } ~

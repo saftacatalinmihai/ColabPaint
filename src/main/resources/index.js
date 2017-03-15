@@ -3,20 +3,22 @@ $(document).ready( function() {
     var cursors = {};
     var pointerDown = false;
 
+    $("#nameInput").val(readCookie("name"))
+
     var app = new PIXI.Application(600, 400,{antialias: true });
     $(".app").append(app.view);
     app.stage.interactive = true;
     app.stage.hitArea = new PIXI.Rectangle(0, 0, 1000, 1000);
+
+    var graphics = new PIXI.Graphics();
+    graphics.lineStyle(0);
+    app.stage.addChild(graphics);
 
     var nameText = new PIXI.Text(getName(), {fontFamily : 'Arial', fontSize: 16, fill : 0xffffff, align : 'center'});
     nameText.interactive = true;
     nameText.x = 30;
     nameText.y = 90;
     app.stage.addChild(nameText);
-
-    var graphics = new PIXI.Graphics();
-    graphics.lineStyle(0);
-    app.stage.addChild(graphics);
 
     var ws = new WebSocket("ws://" + window.location.hostname + ":8080/paint");
     ws.onopen = function() {
@@ -29,6 +31,7 @@ $(document).ready( function() {
         });
         $("#nameInput").keyup(function(){
             nameText.text = this.value;
+            createCookie("name", this.value, 3);
             ws.send(JSON.stringify({
                 "msgType": "updateCursor",
                 "cursorOwner": this.value,
@@ -156,5 +159,26 @@ $(document).ready( function() {
         graphics.beginFill("0x"+color, 0.5);
         graphics.drawCircle(x, y, 6);
         graphics.endFill();
+    }
+
+    function createCookie(name,value,days) {
+        var expires = "";
+        if (days) {
+            var date = new Date();
+            date.setTime(date.getTime() + (days*24*60*60*1000));
+            expires = "; expires=" + date.toUTCString();
+        }
+        document.cookie = name + "=" + value + expires + "; path=/";
+    }
+
+    function readCookie(name) {
+        var nameEQ = name + "=";
+        var ca = document.cookie.split(';');
+        for(var i=0;i < ca.length;i++) {
+            var c = ca[i];
+            while (c.charAt(0)==' ') c = c.substring(1,c.length);
+            if (c.indexOf(nameEQ) == 0) return c.substring(nameEQ.length,c.length);
+        }
+        return null;
     }
 });

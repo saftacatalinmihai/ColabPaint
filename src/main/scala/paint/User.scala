@@ -11,7 +11,7 @@ object User {
   case class OutgoingMessage(text: String)
 }
 
-class User(chatRoom: ActorRef) extends Actor {
+class User(room: ActorRef) extends Actor {
   import User._
   var name: String = ""
 
@@ -21,14 +21,18 @@ class User(chatRoom: ActorRef) extends Actor {
   }
 
   def connected(outgoing: ActorRef): Receive = {
-    chatRoom ! Room.Join(this)
+    room ! Room.Join(this)
 
     {
       case IncomingMessage(text) =>
         name = cursorOwner(text)
-        chatRoom ! Room.ChatMessage(text)
+        room ! Room.Message(text)
 
-      case Room.ChatMessage(text) =>
+      case messageList: List[Room.Message] =>
+        println("Sending bulk")
+        outgoing ! OutgoingMessage(s"""{"msgType": "bulkDraw", "events": [${messageList.map(_.message).mkString(",")}]}""")
+
+      case Room.Message(text) =>
         if (cursorOwner(text) != name) {
           outgoing ! OutgoingMessage(text)
         }

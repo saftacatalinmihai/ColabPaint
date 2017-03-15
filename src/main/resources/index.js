@@ -18,9 +18,12 @@ $(document).ready( function() {
     graphics.lineStyle(0);
     app.stage.addChild(graphics);
 
-
-    var ws = new WebSocket("ws://" + window.location.hostname + ":8080/chat");
+    var ws = new WebSocket("ws://" + window.location.hostname + ":8080/paint");
     ws.onopen = function() {
+        $("#reset").submit(function( event ) {
+            alert( "Handler for .submit() called." );
+            event.preventDefault();
+        });
         $("#nameInput").keyup(function(){
             nameText.text = this.value;
             ws.send(JSON.stringify({
@@ -42,75 +45,6 @@ $(document).ready( function() {
             });
             ws.send(data);
         });
-
-        ws.onmessage = function(e) {
-            var data = JSON.parse(e.data);
-            // console.log(data);
-            var msgType = data["msgType"];
-            var cursorOwner = data["cursorOwner"];
-            if (cursorOwner == getName()) {return}
-
-            var cursorGraphics;
-            switch (msgType) {
-                case "updateCursor":
-                    var X = data["x"];
-                    var Y = data["y"];
-                    var cursorName;
-                    if (!(cursorOwner in cursors)) {
-                        cursorName = new PIXI.Text(cursorOwner, {
-                            fontFamily: 'Arial',
-                            fontSize: 16,
-                            fill: 0xffffff,
-                            align: 'center'
-                        });
-                        cursorName.interactive = true;
-                        app.stage.addChild(cursorName);
-
-                        cursorGraphics = new PIXI.Graphics();
-                        graphics.lineStyle(0);
-                        app.stage.addChild(cursorGraphics);
-                        cursors[cursorOwner] = {
-                            "name": cursorName,
-                            "graphics": cursorGraphics,
-                            "down": false
-                        };
-                    }
-                    else {
-                        cursorName = cursors[cursorOwner]["name"];
-                    }
-                    cursorName.x = X;
-                    cursorName.y = Y;
-                    break;
-                case "cursorDown":
-                    console.log("cursor Down");
-                    cursorGraphics = cursors[cursorOwner]["graphics"];
-                    cursors[cursorOwner]["down"] = true;
-                    break;
-                case "cursorMove":
-                    console.log("cursor move");
-                    cursorGraphics = cursors[cursorOwner]["graphics"];
-                    if (cursors[cursorOwner]["down"] == true) {
-                        var x = data["x"];
-                        var y = data["y"];
-                        var color = data["color"];
-                        drawCircle(x, y, graphics, color)
-                    }
-                    break;
-                case "cursorUp":
-                    console.log("cursor up");
-                    cursorGraphics = cursors[cursorOwner]["graphics"];
-                    cursors[cursorOwner]["down"] = false;
-                    break;
-                case "disconnected":
-                    cursorName = cursors[cursorOwner];
-                    cursorName.destroy();
-                    delete cursors[cursorOwner];
-                    break;
-                default:
-                    console.log("Unknown message type: " + msgType)
-            }
-        };
-
         app.stage.on('pointerdown', function(){
             pointerDown = true;
             ws.send(JSON.stringify({
@@ -138,9 +72,88 @@ $(document).ready( function() {
                 "msgType": "cursorUp",
                 "cursorOwner": getName()
             }))
-        })
-    };
+        });
 
+        ws.onmessage = function(e) {
+            // console.log(e);
+            var data = JSON.parse(e.data);
+            // console.log(data);
+            var msgType = data["msgType"];
+            var cursorOwner = data["cursorOwner"];
+            if (cursorOwner == getName()) {return}
+
+            var cursorNameText;
+            var cursorGraphics;
+            if (!(cursorOwner in cursors)) {
+                cursorNameText = new PIXI.Text(cursorOwner, {
+                    fontFamily: 'Arial',
+                    fontSize: 16,
+                    fill: 0xffffff,
+                    align: 'center'
+                });
+                cursorNameText.interactive = true;
+                app.stage.addChild(cursorNameText);
+
+                cursorGraphics = new PIXI.Graphics();
+                graphics.lineStyle(0);
+                app.stage.addChild(cursorGraphics);
+                cursors[cursorOwner] = {
+                    "name": cursorNameText,
+                    "graphics": cursorGraphics,
+                    "down": false
+                };
+            } else {
+                cursorNameText = cursors[cursorOwner]["name"];
+                cursorGraphics = cursors[cursorOwner]["graphics"];
+            }
+            applyEvent(msgType, data, cursorOwner, cursorNameText, cursorGraphics)
+
+        };
+    };
+    function applyEvent(msgType, data, cursorOwner, cursorNameText, cursorGraphics){
+        switch (msgType) {
+            case "bulkDraw":
+                console.log("Bulk");
+                var events = data["events"];
+                console.log(events);
+                events.forEach(function(ev){
+                    applyEvent(ev["msgType"], ev, cursorOwner, cursorNameText, cursorGraphics)
+                });
+                break;
+            case "updateCursor":
+                cursorNameText.x = data["x"];
+                cursorNameText.y = data["y"];
+                break;
+            case "cursorDown":
+                console.log("down");
+                cursors[cursorOwner]["down"] = true;
+                console.log(cursors[cursorOwner]["down"]);
+                console.log("down");
+                break;
+            case "cursorMove":
+                console.log("move");
+                console.log(cursors[cursorOwner]["down"]);
+                if (cursors[cursorOwner]["down"] == true) {
+                    console.log("moving");
+                    var x = data["x"];
+                    var y = data["y"];
+                    var color = data["color"];
+                    drawCircle(x, y, cursorGraphics, color)
+                }
+                break;
+            case "cursorUp":
+                console.log("up");
+                cursors[cursorOwner]["down"] = false;
+                break;
+            case "disconnected":
+                cursorNameText = cursors[cursorOwner];
+                cursorNameText.destroy();
+                delete cursors[cursorOwner];
+                break;
+            default:
+                console.log("Unknown message type: " + msgType)
+        }
+    }
     function getName(){
         return $("#nameInput")[0].value
     }

@@ -17,16 +17,19 @@ object Server {
     implicit val system = ActorSystem()
     implicit val materializer = ActorMaterializer()
 
-    val chatRoom = system.actorOf(Props(new Room))
+    val room = system.actorOf(Props(new Room))
+    val evStore   = system.actorOf(Props(new EventStore))
 
     def newUser(): Flow[Message, Message, NotUsed] = {
       // new connection - new user actor
-      val userActor = system.actorOf(Props(new User(chatRoom)))
+      val userActor = system.actorOf(Props(new User(room)))
 
       val incomingMessages: Sink[Message, NotUsed] =
         Flow[Message].map {
           // transform websocket message to domain message
-          case TextMessage.Strict(text) => User.IncomingMessage(text)
+          case TextMessage.Strict(text) =>
+            evStore ! text
+            User.IncomingMessage(text)
         }.to(Sink.actorRef[User.IncomingMessage](userActor, PoisonPill))
 
       val outgoingMessages: Source[Message, NotUsed] =
@@ -34,10 +37,12 @@ object Server {
           .mapMaterializedValue { outActor =>
             // give the user actor a way to send messages out
             userActor ! User.Connected(outActor)
+            evStore ! userActor
             NotUsed
           }.map(
           // transform domain message to web socket message
           (outMsg: User.OutgoingMessage) => TextMessage(outMsg.text))
+
 
       // then combine both to a flow
       Flow.fromSinkAndSource(incomingMessages, outgoingMessages)

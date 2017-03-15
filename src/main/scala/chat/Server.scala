@@ -30,7 +30,7 @@ object Server {
         }.to(Sink.actorRef[User.IncomingMessage](userActor, PoisonPill))
 
       val outgoingMessages: Source[Message, NotUsed] =
-        Source.actorRef[User.OutgoingMessage](10, OverflowStrategy.fail)
+        Source.actorRef[User.OutgoingMessage](1000, OverflowStrategy.fail)
           .mapMaterializedValue { outActor =>
             // give the user actor a way to send messages out
             userActor ! User.Connected(outActor)
@@ -44,13 +44,16 @@ object Server {
     }
 
     val route =
+      path("index.js") {
+        getFromResource("index.js")
+      } ~
       path("chat") {
         get {
           handleWebSocketMessages(newUser())
         }
-      }
+      } ~ getFromResource("index.html")
 
-    val binding = Await.result(Http().bindAndHandle(route, "127.0.0.1", 8080), 3.seconds)
+    val binding = Await.result(Http().bindAndHandle(route, "0.0.0.0", 8080), 3.seconds)
 
     // the rest of the sample code will go here
     println("Started server at 127.0.0.1:8080, press enter to kill server")

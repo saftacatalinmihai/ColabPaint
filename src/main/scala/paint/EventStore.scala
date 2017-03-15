@@ -15,7 +15,7 @@ class EventStore extends Actor {
     case userActor: ActorRef => sendDrawEventsTo(userActor)
     case event: String =>
       val (msgType, ev) = (parseMsgType(event), event)
-      if (msgType == "reset ") {
+      if (msgType == "reset") {
         canvases = events :: canvases
         events = List.empty
       } else {

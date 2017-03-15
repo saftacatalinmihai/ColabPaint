@@ -21,7 +21,7 @@ $(document).ready( function() {
     var ws = new WebSocket("ws://" + window.location.hostname + ":8080/paint");
     ws.onopen = function() {
         $("#reset").click(function() {
-            console.log( "Handler for .submit() called." );
+            resetGraphics(graphics)
             ws.send(JSON.stringify({
                 "msgType": "reset",
                 "cursorOwner": getName()
@@ -86,7 +86,6 @@ $(document).ready( function() {
             if (cursorOwner == getName()) {return}
 
             var cursorNameText;
-            var cursorGraphics;
             if (!(cursorOwner in cursors)) {
                 cursorNameText = new PIXI.Text(cursorOwner, {
                     fontFamily: 'Arial',
@@ -97,30 +96,25 @@ $(document).ready( function() {
                 cursorNameText.interactive = true;
                 app.stage.addChild(cursorNameText);
 
-                cursorGraphics = new PIXI.Graphics();
-                graphics.lineStyle(0);
-                app.stage.addChild(cursorGraphics);
                 cursors[cursorOwner] = {
                     "name": cursorNameText,
-                    "graphics": graphics,
                     "down": false
                 };
             } else {
                 cursorNameText = cursors[cursorOwner]["name"];
-                cursorGraphics = cursors[cursorOwner]["graphics"];
             }
-            applyEvent(msgType, data, cursorOwner, cursorNameText, cursorGraphics)
+            applyEvent(msgType, data, cursorOwner, cursorNameText)
 
         };
     };
-    function applyEvent(msgType, data, cursorOwner, cursorNameText, cursorGraphics){
+    function applyEvent(msgType, data, cursorOwner, cursorNameText){
         switch (msgType) {
             case "bulkDraw":
                 console.log("Bulk");
                 var events = data["events"];
                 console.log(events);
                 events.forEach(function(ev){
-                    applyEvent(ev["msgType"], ev, cursorOwner, cursorNameText, cursorGraphics)
+                    applyEvent(ev["msgType"], ev, cursorOwner, cursorNameText)
                 });
                 break;
             case "updateCursor":
@@ -141,7 +135,7 @@ $(document).ready( function() {
                     var x = data["x"];
                     var y = data["y"];
                     var color = data["color"];
-                    drawCircle(x, y, cursorGraphics, color)
+                    drawCircle(x, y, graphics, color)
                 }
                 break;
             case "cursorUp":
@@ -156,6 +150,10 @@ $(document).ready( function() {
             default:
                 console.log("Unknown message type: " + msgType)
         }
+    }
+    function resetGraphics(graphics){
+        graphics.clear();
+        app.stage.addChild(graphics);
     }
     function getName(){
         return $("#nameInput")[0].value

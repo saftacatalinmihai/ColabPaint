@@ -1,6 +1,4 @@
-package chat
-
-import java.util.UUID
+package paint
 
 import akka.NotUsed
 import akka.actor._
@@ -52,7 +50,7 @@ object Server {
       path("index.js") {
         getFromResource("index.js")
       } ~
-      path("chat") {
+      path("paint") {
         get {
           handleWebSocketMessages(newUser())
         }

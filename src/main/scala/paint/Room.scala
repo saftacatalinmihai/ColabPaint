@@ -1,4 +1,4 @@
-package chat
+package paint
 
 import akka.actor._
 

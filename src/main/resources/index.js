@@ -110,9 +110,7 @@ $(document).ready( function() {
     function applyEvent(msgType, data, cursorOwner, cursorNameText){
         switch (msgType) {
             case "bulkDraw":
-                console.log("Bulk");
                 var events = data["events"];
-                console.log(events);
                 events.forEach(function(ev){
                     applyEvent(ev["msgType"], ev, cursorOwner, cursorNameText)
                 });
@@ -122,16 +120,10 @@ $(document).ready( function() {
                 cursorNameText.y = data["y"];
                 break;
             case "cursorDown":
-                console.log("down");
                 cursors[cursorOwner]["down"] = true;
-                console.log(cursors[cursorOwner]["down"]);
-                console.log("down");
                 break;
             case "cursorMove":
-                console.log("move");
-                console.log(cursors[cursorOwner]["down"]);
                 if (cursors[cursorOwner]["down"] == true) {
-                    console.log("moving");
                     var x = data["x"];
                     var y = data["y"];
                     var color = data["color"];
@@ -139,7 +131,6 @@ $(document).ready( function() {
                 }
                 break;
             case "cursorUp":
-                console.log("up");
                 cursors[cursorOwner]["down"] = false;
                 break;
             case "disconnected":

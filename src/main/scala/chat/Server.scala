@@ -1,5 +1,7 @@
 package chat
 
+import java.util.UUID
+
 import akka.NotUsed
 import akka.actor._
 import akka.http.scaladsl._
@@ -17,7 +19,7 @@ object Server {
     implicit val system = ActorSystem()
     implicit val materializer = ActorMaterializer()
 
-    val chatRoom = system.actorOf(Props(new ChatRoom), "chat")
+    val chatRoom = system.actorOf(Props(new Room))
 
     def newUser(): Flow[Message, Message, NotUsed] = {
       // new connection - new user actor

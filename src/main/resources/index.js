@@ -1,7 +1,6 @@
 $(document).ready( function() {
     var app = new PIXI.Application(600, 400);
     $(".app").append(app.view);
-    var graphics = new PIXI.Graphics();
 
     function getName(){
         return $("#nameInput")[0].value
@@ -15,45 +14,64 @@ $(document).ready( function() {
     app.stage.addChild(nameText);
 
     var cursors = {};
-    console.log(window.location.hostname);
 
     var ws = new WebSocket("ws://" + window.location.hostname + ":8080/chat");
 
     ws.onopen = function(e) {
-        ws.send("connected" + "|" + getName());
         nameText.on('pointermove', function(e) {
             var ev = e.data.originalEvent;
             nameText.x = ev.pageX;
             nameText.y = ev.pageY;
-            ws.send(getName() + "|" + ev.pageX + "|" + ev.pageY);
+            var data = JSON.stringify({
+                "msgType": "updateCursor",
+                "cursorOwner": getName(),
+                "x": ev.pageX,
+                "y": ev.pageY
+            });
+            ws.send(data);
         });
         ws.onmessage = function(e) {
-            var pos = e.data.split("|");
-            var name = pos[0];
-            var X = pos[1];
-            var Y = pos[2];
-            var nameT;
-            if (!(name in cursors)) {
-                nameT = new PIXI.Text(name, {
-                    fontFamily: 'Arial',
-                    fontSize: 16,
-                    fill: 0xffffff,
-                    align: 'center'
-                });
-                nameT.interactive = true;
-                app.stage.addChild(nameT);
-                cursors[name] = nameT;
+            var data = JSON.parse(e.data);
+            var msgType = data["msgType"];
+            var cursorOwner = data["cursorOwner"];
+            switch (msgType) {
+                case "updateCursor": {
+                    var X = data["x"];
+                    var Y = data["y"];
+                    var cursorText;
+                    if (!(cursorOwner in cursors)) {
+                        cursorText = new PIXI.Text(cursorOwner, {
+                            fontFamily: 'Arial',
+                            fontSize: 16,
+                            fill: 0xffffff,
+                            align: 'center'
+                        });
+                        cursorText.interactive = true;
+                        app.stage.addChild(cursorText);
+                        cursors[cursorOwner] = cursorText;
+                    }
+                    else {
+                        cursorText = cursors[cursorOwner];
+                    }
+                    cursorText.x = X;
+                    cursorText.y = Y;
+                } break;
+                case "disconnected": {
+                    cursorText = cursors[cursorOwner];
+                    cursorText.destroy();
+                    delete cursors[cursorOwner]
+                }
             }
-            else {
-                nameT = cursors[name];
-            }
-            nameT.x = X;
-            nameT.y = Y;
         };
 
         $("#nameInput").keyup(function(){
             nameText.text = this.value;
-            ws.send(getName() + "|" + nameText.x + "|" + nameText.y);
+            ws.send(JSON.stringify({
+                "msgType": "updateCursor",
+                "cursorOwner": this.value,
+                "x": nameText.x,
+                "y": nameText.y
+            }));
         })
     };
 });

@@ -45,7 +45,6 @@ $(document).ready( function() {
     graphics.lineStyle(0);
     app.stage.addChild(graphics);
 
-    applyEvent({"eventType": "newCursor", "cursorOwner": getName()});
     function startWebSocket(){
         console.log("WS connected");
 

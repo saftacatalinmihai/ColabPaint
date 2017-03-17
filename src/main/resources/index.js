@@ -1,8 +1,35 @@
+function updateColor(picker){
+    createCookie("color", picker.toHEXString(), 3);
+}
+function createCookie(name,value,days) {
+    var expires = "";
+    if (days) {
+        var date = new Date();
+        date.setTime(date.getTime() + (days*24*60*60*1000));
+        expires = "; expires=" + date.toUTCString();
+    }
+    document.cookie = name + "=" + value + expires + "; path=/";
+}
+function readCookie(name) {
+    var nameEQ = name + "=";
+    var ca = document.cookie.split(';');
+    for(var i=0;i < ca.length;i++) {
+        var c = ca[i];
+        while (c.charAt(0)==' ') c = c.substring(1,c.length);
+        if (c.indexOf(nameEQ) == 0) return c.substring(nameEQ.length,c.length);
+    }
+    return null;
+}
 $(document).ready( function() {
     // GLOBAL STATE VARIABLES:
     var cursors = {};
 
-    $("#nameInput").val(readCookie("name"));
+    if (readCookie("name")) {
+        $("#nameInput").val(readCookie("name"));
+    }
+    if (readCookie("color")) {
+        document.getElementById('jscolor').jscolor.fromString(readCookie("color"));
+    }
 
     var app = new PIXI.Application(600, 400,{antialias: true });
     $(".app").append(app.view);
@@ -27,14 +54,12 @@ $(document).ready( function() {
             ws.send(JSON.stringify(event))
         });
         $("#nameInput").keyup(function(){
+            createCookie("name", this.value, 3);
             var event = {
                 "msgType": "updateCursor",
-                "cursorOwner": this.value,
-                "x": cursors[getName()]["name"].x,
-                "y": cursors[getName()]["name"].y
+                "cursorOwner": this.value
             };
             applyEvent(event);
-            createCookie("name", this.value, 3);
             ws.send(JSON.stringify(event));
         });
         cursors[getName()]["name"].on('pointermove', function(e) {
@@ -88,24 +113,27 @@ $(document).ready( function() {
         };
     };
     function applyEvent(event){
-        switch (event["msgType"]) {
-            case "newCursor":
-                if (!(event["cursorOwner"] in cursors)) {
-                    var cursorNameText = new PIXI.Text(event["cursorOwner"], {
-                        fontFamily: 'Arial',
-                        fontSize: 16,
-                        fill: 0xffffff,
-                        align: 'center'
-                    });
-                    cursorNameText.interactive = true;
-                    app.stage.addChild(cursorNameText);
+        // console.log(event);
+        if (event["msgType"] == "newCursor") {
+            if (!(event["cursorOwner"] in cursors)) {
+                var cursorNameText = new PIXI.Text(event["cursorOwner"], {
+                    fontFamily: 'Arial',
+                    fontSize: 16,
+                    fill: 0xffffff,
+                    align: 'center'
+                });
+                cursorNameText.interactive = true;
+                app.stage.addChild(cursorNameText);
 
-                    cursors[event["cursorOwner"]] = {
-                        "name": cursorNameText,
-                        "down": false
-                    };
-                }
-                break;
+                cursors[event["cursorOwner"]] = {
+                    "name": cursorNameText,
+                    "down": false
+                };
+            }
+            return;
+        }
+        if (!(event["cursorOwner"] in cursors)){ applyEvent({"msgType": "newCursor", "cursorOwner": event["cursorOwner"]})}
+        switch (event["msgType"]) {
             case "bulkDraw":
                 var events = event["events"];
                 events.forEach(function(ev){
@@ -157,26 +185,5 @@ $(document).ready( function() {
         graphics.beginFill("0x"+color, 0.5);
         graphics.drawCircle(x, y, 6);
         graphics.endFill();
-    }
-
-    function createCookie(name,value,days) {
-        var expires = "";
-        if (days) {
-            var date = new Date();
-            date.setTime(date.getTime() + (days*24*60*60*1000));
-            expires = "; expires=" + date.toUTCString();
-        }
-        document.cookie = name + "=" + value + expires + "; path=/";
-    }
-
-    function readCookie(name) {
-        var nameEQ = name + "=";
-        var ca = document.cookie.split(';');
-        for(var i=0;i < ca.length;i++) {
-            var c = ca[i];
-            while (c.charAt(0)==' ') c = c.substring(1,c.length);
-            if (c.indexOf(nameEQ) == 0) return c.substring(nameEQ.length,c.length);
-        }
-        return null;
     }
 });

@@ -1,12 +1,6 @@
 package paint
 
-import java.io.{BufferedWriter, File, FileWriter}
-
-import scala.concurrent.ExecutionContext.Implicits.global
-import akka.actor.{Actor, ActorRef}
-
-import scala.concurrent.Future
-import scala.util.Try
+import akka.actor.ActorRef
 import akka.persistence.{PersistentActor, SnapshotOffer}
 
 import scala.util.parsing.json.JSON

@@ -82,7 +82,9 @@ $(document).ready( function() {
     }
     startWebSocket();
 
-    sendEvent({"eventType": "newCursor", "cursorOwner": getName()});
+    var newCursorEvent = {"eventType": "newCursor", "cursorOwner": getName()};
+    applyEvent(newCursorEvent);
+    sendEvent(newCursorEvent);
     $("#reset").click(function() {
         var event = {
             "eventType": "reset",

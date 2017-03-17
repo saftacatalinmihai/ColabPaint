@@ -22,7 +22,10 @@ function readCookie(name) {
 }
 $(document).ready( function() {
     // GLOBAL STATE VARIABLES:
+    var timerID=0;
     var cursors = {};
+    var connected = false;
+    var ws;
 
     if (readCookie("name")) {
         $("#nameInput").val(readCookie("name"));
@@ -41,77 +44,91 @@ $(document).ready( function() {
     app.stage.addChild(graphics);
 
     applyEvent({"msgType": "newCursor", "cursorOwner": getName()});
-
-    var ws = new WebSocket("ws://" + window.location.hostname + ":8080/paint");
-    ws.onopen = function() {
-        ws.send(JSON.stringify({"msgType": "newCursor", "cursorOwner": getName()}));
-        $("#reset").click(function() {
-            var event = {
-                "msgType": "reset",
-                "cursorOwner": getName()
-            };
-            applyEvent(event);
-            ws.send(JSON.stringify(event))
-        });
-        $("#nameInput").keyup(function(){
-            createCookie("name", this.value, 3);
-            var event = {
-                "msgType": "updateCursor",
-                "cursorOwner": this.value
-            };
-            applyEvent(event);
-            ws.send(JSON.stringify(event));
-        });
-        cursors[getName()]["name"].on('pointermove', function(e) {
-            var event = {
-                "msgType": "updateCursor",
-                "cursorOwner": getName(),
-                "x": e.data.originalEvent.pageX,
-                "y": e.data.originalEvent.pageY
-            };
-            applyEvent(event);
-            ws.send(JSON.stringify(event));
-        });
-        app.stage.on('pointerdown', function(){
-            var event = {
-                "msgType": "cursorDown",
-                "cursorOwner": getName()
-            };
-            applyEvent(event);
-            ws.send(JSON.stringify(event))
-        });
-        app.stage.on('pointermove', function(e) {
-            var event = {
-                "msgType": "cursorMove",
-                "cursorOwner": getName(),
-                "x": e.data.originalEvent.pageX,
-                "y": e.data.originalEvent.pageY,
-                "color": getColor()
-            };
-            applyEvent(event);
-            if (cursors[getName()]["down"]) {
-                ws.send(JSON.stringify(event))
+    function startWebSocket(){
+        console.log("WS connected");
+        ws = new WebSocket("ws://" + window.location.hostname + ":8080/paint");
+        ws.onopen = function() {
+            if(window.timerID){ /* a setInterval has been fired */
+                window.clearInterval(window.timerID);
+                window.timerID=0;
             }
-        });
-        app.stage.on('pointerup', function() {
-            var event = {
-                "msgType": "cursorUp",
-                "cursorOwner": getName()
-            };
-            applyEvent(event);
-            ws.send(JSON.stringify(event))
-        });
-
+            connected = true;
+            ws.send(JSON.stringify({"msgType": "newCursor", "cursorOwner": getName()}));
+            $("#reset").click(function() {
+                var event = {
+                    "msgType": "reset",
+                    "cursorOwner": getName()
+                };
+                applyEvent(event);
+                ws.send(JSON.stringify(event))
+            });
+            $("#nameInput").keyup(function(){
+                createCookie("name", this.value, 3);
+                var event = {
+                    "msgType": "updateCursor",
+                    "cursorOwner": this.value
+                };
+                applyEvent(event);
+                ws.send(JSON.stringify(event));
+            });
+            cursors[getName()]["name"].on('pointermove', function(e) {
+                var event = {
+                    "msgType": "updateCursor",
+                    "cursorOwner": getName(),
+                    "x": e.data.originalEvent.pageX,
+                    "y": e.data.originalEvent.pageY
+                };
+                applyEvent(event);
+                ws.send(JSON.stringify(event));
+            });
+            app.stage.on('pointerdown', function(){
+                var event = {
+                    "msgType": "cursorDown",
+                    "cursorOwner": getName()
+                };
+                applyEvent(event);
+                ws.send(JSON.stringify(event))
+            });
+            app.stage.on('pointermove', function(e) {
+                var event = {
+                    "msgType": "cursorMove",
+                    "cursorOwner": getName(),
+                    "x": e.data.originalEvent.pageX,
+                    "y": e.data.originalEvent.pageY,
+                    "color": getColor()
+                };
+                applyEvent(event);
+                if (cursors[getName()]["down"]) {
+                    ws.send(JSON.stringify(event))
+                }
+            });
+            app.stage.on('pointerup', function() {
+                var event = {
+                    "msgType": "cursorUp",
+                    "cursorOwner": getName()
+                };
+                applyEvent(event);
+                ws.send(JSON.stringify(event))
+            });
+        };
         ws.onmessage = function(e) {
             // console.log(e);
             var data = JSON.parse(e.data);
             // console.log(data);
             var cursorOwner = data["cursorOwner"];
             if (cursorOwner == getName()) {return}
-
             applyEvent(data)
         };
-    };
+        ws.onclose = function(){
+            if(!window.timerID){ /* avoid firing a new setInterval, after one has been done */
+                window.timerID=setInterval(function(){startWebSocket()}, 5000);
+            }
+            connected = false;
+            console.log("WS disconnected");
+        };
+    }
+    startWebSocket();
+
     function applyEvent(event){
         // console.log(event);
         if (event["msgType"] == "newCursor") {

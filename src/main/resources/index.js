@@ -20,12 +20,13 @@ function readCookie(name) {
     }
     return null;
 }
+var timerID=0;
 $(document).ready( function() {
     // GLOBAL STATE VARIABLES:
-    var timerID=0;
     var cursors = {};
     var connected = false;
     var ws;
+    var bufferedDrawEventList = [];
 
     if (readCookie("name")) {
         $("#nameInput").val(readCookie("name"));
@@ -38,7 +39,6 @@ $(document).ready( function() {
     $(".app").append(app.view);
     app.stage.interactive = true;
     app.stage.hitArea = new PIXI.Rectangle(0, 0, 1000, 1000);
-
     var graphics = new PIXI.Graphics();
     graphics.lineStyle(0);
     app.stage.addChild(graphics);
@@ -53,63 +53,10 @@ $(document).ready( function() {
                 window.timerID=0;
             }
             connected = true;
-            ws.send(JSON.stringify({"msgType": "newCursor", "cursorOwner": getName()}));
-            $("#reset").click(function() {
-                var event = {
-                    "msgType": "reset",
-                    "cursorOwner": getName()
-                };
-                applyEvent(event);
-                ws.send(JSON.stringify(event))
-            });
-            $("#nameInput").keyup(function(){
-                createCookie("name", this.value, 3);
-                var event = {
-                    "msgType": "updateCursor",
-                    "cursorOwner": this.value
-                };
-                applyEvent(event);
-                ws.send(JSON.stringify(event));
-            });
-            cursors[getName()]["name"].on('pointermove', function(e) {
-                var event = {
-                    "msgType": "updateCursor",
-                    "cursorOwner": getName(),
-                    "x": e.data.originalEvent.pageX,
-                    "y": e.data.originalEvent.pageY
-                };
-                applyEvent(event);
-                ws.send(JSON.stringify(event));
-            });
-            app.stage.on('pointerdown', function(){
-                var event = {
-                    "msgType": "cursorDown",
-                    "cursorOwner": getName()
-                };
-                applyEvent(event);
-                ws.send(JSON.stringify(event))
-            });
-            app.stage.on('pointermove', function(e) {
-                var event = {
-                    "msgType": "cursorMove",
-                    "cursorOwner": getName(),
-                    "x": e.data.originalEvent.pageX,
-                    "y": e.data.originalEvent.pageY,
-                    "color": getColor()
-                };
-                applyEvent(event);
-                if (cursors[getName()]["down"]) {
-                    ws.send(JSON.stringify(event))
-                }
-            });
-            app.stage.on('pointerup', function() {
-                var event = {
-                    "msgType": "cursorUp",
-                    "cursorOwner": getName()
-                };
-                applyEvent(event);
-                ws.send(JSON.stringify(event))
-            });
+            if (bufferedDrawEventList.length > 0) {
+                sendEvent({"msgType": "bulkDraw", "cursorOwner": getName(), "events": bufferedDrawEventList});
+                bufferedDrawEventList = [];
+            }
         };
         ws.onmessage = function(e) {
             // console.log(e);
@@ -129,8 +76,75 @@ $(document).ready( function() {
     }
     startWebSocket();
 
+    sendEvent({"msgType": "newCursor", "cursorOwner": getName()});
+    $("#reset").click(function() {
+        var event = {
+            "msgType": "reset",
+            "cursorOwner": getName()
+        };
+        applyEvent(event);
+        sendEvent(event)
+    });
+    $("#nameInput").keyup(function(){
+        createCookie("name", this.value, 3);
+        var event = {
+            "msgType": "updateCursor",
+            "cursorOwner": this.value
+        };
+        applyEvent(event);
+        sendEvent(event);
+    });
+    cursors[getName()]["name"].on('pointermove', function(e) {
+        var event = {
+            "msgType": "updateCursor",
+            "cursorOwner": getName(),
+            "x": e.data.originalEvent.pageX,
+            "y": e.data.originalEvent.pageY
+        };
+        applyEvent(event);
+        sendEvent(event);
+    });
+    app.stage.on('pointerdown', function(){
+        var event = {
+            "msgType": "cursorDown",
+            "cursorOwner": getName()
+        };
+        applyEvent(event);
+        sendEvent(event)
+    });
+    app.stage.on('pointermove', function(e) {
+        var event = {
+            "msgType": "cursorMove",
+            "cursorOwner": getName(),
+            "x": e.data.originalEvent.pageX,
+            "y": e.data.originalEvent.pageY,
+            "color": getColor()
+        };
+        applyEvent(event);
+        if (cursors[getName()]["down"]) {
+            sendEvent(event)
+        }
+    });
+    app.stage.on('pointerup', function() {
+        var event = {
+            "msgType": "cursorUp",
+            "cursorOwner": getName()
+        };
+        applyEvent(event);
+        sendEvent(event)
+    });
+
+    function sendEvent(event){
+        if (connected) {
+            ws.send(JSON.stringify(event))
+        } else {
+            if ($.inArray(event["msgType"], ["newCursor", "cursorDown", "cursorMove", "cursorUp"])){
+                bufferedDrawEventList.push(event);
+            }
+        }
+    }
+
     function applyEvent(event){
-        // console.log(event);
         if (event["msgType"] == "newCursor") {
             if (!(event["cursorOwner"] in cursors)) {
                 var cursorNameText = new PIXI.Text(event["cursorOwner"], {
@@ -149,7 +163,10 @@ $(document).ready( function() {
             }
             return;
         }
-        if (!(event["cursorOwner"] in cursors)){ applyEvent({"msgType": "newCursor", "cursorOwner": event["cursorOwner"]})}
+        if (!(event["cursorOwner"] in cursors)){
+            applyEvent({"msgType": "newCursor", "cursorOwner": event["cursorOwner"]});
+            applyEvent(event);
+        }
         switch (event["msgType"]) {
             case "bulkDraw":
                 var events = event["events"];
@@ -185,7 +202,8 @@ $(document).ready( function() {
                 delete cursors[event["cursorOwner"]];
                 break;
             default:
-                console.log("Unknown message type: " + event["msgType"])
+                console.log("Unknown message type: " + event["msgType"]);
+                console.log(event);
         }
     }
     function resetGraphics(graphics){

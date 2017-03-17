@@ -30,7 +30,7 @@ object Server {
           case TextMessage.Strict(text) =>
             evStore ! text
             User.IncomingMessage(text)
-        }.to(Sink.actorRef[User.IncomingMessage](userActor, Shutdown))
+        }.to(Sink.actorRef[User.IncomingMessage](userActor, PoisonPill))
 
       val outgoingMessages: Source[Message, NotUsed] =
         Source.actorRef[User.OutgoingMessage](10000, OverflowStrategy.fail)

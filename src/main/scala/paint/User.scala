@@ -2,8 +2,6 @@ package paint
 
 import akka.actor.{Actor, ActorRef}
 
-import scala.util.parsing.json.JSON
-
 object User {
   type Id = String
   case class Connected(outActor: ActorRef)
@@ -17,7 +15,7 @@ class User(room: ActorRef, eventStore: ActorRef) extends Actor {
 
   def receive: Receive = {
     case Connected(outActor) =>
-      context.become(connected(outActor))
+      context become connected(outActor)
   }
 
   def connected(outgoing: ActorRef): Receive = {

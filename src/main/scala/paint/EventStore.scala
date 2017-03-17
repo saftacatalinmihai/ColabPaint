@@ -1,9 +1,7 @@
 package paint
 
 import akka.actor.ActorRef
-import akka.persistence.{PersistentActor, SnapshotOffer}
-
-import scala.util.parsing.json.JSON
+import akka.persistence.PersistentActor
 
 /**
   * Created by casafta on 15/3/2017.
@@ -25,12 +23,12 @@ class EventStore extends PersistentActor {
   override def persistenceId: String = "id-1"
 
   def updateState(event: Event): Unit = {
-    val (eventType, ev) = (Parser.parseEventType(event), event)
+    val (eventType, ev) = Parser.parseEventType(event) -> event
     if (eventType == "reset") {
       canvases = events :: canvases
       events = List.empty
     } else {
-      events = (eventType, ev) :: events
+      events = eventType -> ev :: events
     }
   }
 

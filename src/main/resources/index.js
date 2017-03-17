@@ -29,8 +29,9 @@ $(document).ready( function() {
     var ws;
     var bufferedDrawEventList = [];
 
+    var nameInput = $("#nameInput");
     if (readCookie("name")) {
-        $("#nameInput").val(readCookie("name"));
+        nameInput.val(readCookie("name"));
     }
     if (readCookie("color")) {
         document.getElementById('jscolor').jscolor.fromString(readCookie("color"));
@@ -91,7 +92,7 @@ $(document).ready( function() {
         applyEvent(event);
         sendEvent(event)
     });
-    $("#nameInput").keyup(function(){
+    nameInput.keyup(function(){
         createCookie("name", this.value, 3);
         var event = {
             "eventType": "updateCursor",
@@ -151,6 +152,7 @@ $(document).ready( function() {
     }
 
     function applyEvent(event){
+        console.log(event);
         if (event["eventType"] == "newCursor") {
             if (!(event["cursorOwner"] in cursors)) {
                 var cursorNameText = new PIXI.Text(event["cursorOwner"], {
@@ -176,9 +178,7 @@ $(document).ready( function() {
         switch (event["eventType"]) {
             case "bulkDraw":
                 var events = event["events"];
-                events.forEach(function(ev){
-                    applyEvent(ev, cursors)
-                });
+                events.forEach(function(ev){ applyEvent(ev, cursors) });
                 break;
             case "reset":
                 resetGraphics(graphics);
@@ -203,7 +203,6 @@ $(document).ready( function() {
                 cursors[event["cursorOwner"]]["down"] = false;
                 break;
             case "disconnected":
-                cursors[event["cursorOwner"]]["name"] = cursors[event["cursorOwner"]];
                 cursors[event["cursorOwner"]]["name"].destroy();
                 delete cursors[event["cursorOwner"]];
                 break;

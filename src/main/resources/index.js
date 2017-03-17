@@ -152,23 +152,20 @@ $(document).ready( function() {
     }
 
     function applyEvent(event){
-        console.log(event);
-        if (event["eventType"] == "newCursor") {
-            if (!(event["cursorOwner"] in cursors)) {
-                var cursorNameText = new PIXI.Text(event["cursorOwner"], {
-                    fontFamily: 'Arial',
-                    fontSize: 16,
-                    fill: 0xffffff,
-                    align: 'center'
-                });
-                cursorNameText.interactive = true;
-                app.stage.addChild(cursorNameText);
+        if (event["eventType"] == "newCursor" && !(event["cursorOwner"] in cursors)) {
+            var cursorNameText = new PIXI.Text(event["cursorOwner"], {
+                fontFamily: 'Arial',
+                fontSize: 16,
+                fill: 0xffffff,
+                align: 'center'
+            });
+            cursorNameText.interactive = true;
+            app.stage.addChild(cursorNameText);
 
-                cursors[event["cursorOwner"]] = {
-                    "name": cursorNameText,
-                    "down": false
-                };
-            }
+            cursors[event["cursorOwner"]] = {
+                "name": cursorNameText,
+                "down": false
+            };
             return;
         }
         if (!(event["cursorOwner"] in cursors)){

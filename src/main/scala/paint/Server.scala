@@ -22,7 +22,7 @@ object Server {
 
     def newUser(): Flow[Message, Message, NotUsed] = {
       // new connection - new user actor
-      val userActor = system.actorOf(Props(new User(room)))
+      val userActor = system.actorOf(Props(new User(room, evStore)))
 
       val incomingMessages: Sink[Message, NotUsed] =
         Flow[Message].map {
@@ -37,7 +37,6 @@ object Server {
           .mapMaterializedValue { outActor =>
             // give the user actor a way to send messages out
             userActor ! User.Connected(outActor)
-            evStore ! userActor
             NotUsed
           }.map(
           // transform domain message to web socket message
@@ -50,17 +49,18 @@ object Server {
 
     val route =
       // TODO: surely there's a better way of serving static files
+      path("paint") {
+        get {
+          handleWebSocketMessages(newUser())
+        }
+      } ~
       path("jscolor.min.js") {
         getFromResource("jscolor.min.js")
       } ~
       path("index.js") {
         getFromResource("index.js")
       } ~
-      path("paint") {
-        get {
-          handleWebSocketMessages(newUser())
-        }
-      } ~ getFromResource("index.html")
+      getFromResource("index.html")
 
     val binding = Await.result(Http().bindAndHandle(route, "0.0.0.0", 8080), 3.seconds)
 

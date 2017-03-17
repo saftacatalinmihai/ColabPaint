@@ -25,6 +25,7 @@ $(document).ready( function() {
     // GLOBAL STATE VARIABLES:
     var cursors = {};
     var connected = false;
+    var firstConnect = true;
     var ws;
     var bufferedDrawEventList = [];
 
@@ -43,9 +44,10 @@ $(document).ready( function() {
     graphics.lineStyle(0);
     app.stage.addChild(graphics);
 
-    applyEvent({"msgType": "newCursor", "cursorOwner": getName()});
+    applyEvent({"eventType": "newCursor", "cursorOwner": getName()});
     function startWebSocket(){
         console.log("WS connected");
+
         ws = new WebSocket("ws://" + window.location.hostname + ":8080/paint");
         ws.onopen = function() {
             if(window.timerID){ /* a setInterval has been fired */
@@ -53,8 +55,12 @@ $(document).ready( function() {
                 window.timerID=0;
             }
             connected = true;
+            if (firstConnect) {
+                sendEvent({"eventType": "getEvents", "cursorOwner": getName()});
+                firstConnect = false;
+            }
             if (bufferedDrawEventList.length > 0) {
-                sendEvent({"msgType": "bulkDraw", "cursorOwner": getName(), "events": bufferedDrawEventList});
+                sendEvent({"eventType": "bulkDraw", "cursorOwner": getName(), "events": bufferedDrawEventList});
                 bufferedDrawEventList = [];
             }
         };
@@ -76,10 +82,10 @@ $(document).ready( function() {
     }
     startWebSocket();
 
-    sendEvent({"msgType": "newCursor", "cursorOwner": getName()});
+    sendEvent({"eventType": "newCursor", "cursorOwner": getName()});
     $("#reset").click(function() {
         var event = {
-            "msgType": "reset",
+            "eventType": "reset",
             "cursorOwner": getName()
         };
         applyEvent(event);
@@ -88,7 +94,7 @@ $(document).ready( function() {
     $("#nameInput").keyup(function(){
         createCookie("name", this.value, 3);
         var event = {
-            "msgType": "updateCursor",
+            "eventType": "updateCursor",
             "cursorOwner": this.value
         };
         applyEvent(event);
@@ -96,7 +102,7 @@ $(document).ready( function() {
     });
     cursors[getName()]["name"].on('pointermove', function(e) {
         var event = {
-            "msgType": "updateCursor",
+            "eventType": "updateCursor",
             "cursorOwner": getName(),
             "x": e.data.originalEvent.pageX,
             "y": e.data.originalEvent.pageY
@@ -106,7 +112,7 @@ $(document).ready( function() {
     });
     app.stage.on('pointerdown', function(){
         var event = {
-            "msgType": "cursorDown",
+            "eventType": "cursorDown",
             "cursorOwner": getName()
         };
         applyEvent(event);
@@ -114,7 +120,7 @@ $(document).ready( function() {
     });
     app.stage.on('pointermove', function(e) {
         var event = {
-            "msgType": "cursorMove",
+            "eventType": "cursorMove",
             "cursorOwner": getName(),
             "x": e.data.originalEvent.pageX,
             "y": e.data.originalEvent.pageY,
@@ -127,7 +133,7 @@ $(document).ready( function() {
     });
     app.stage.on('pointerup', function() {
         var event = {
-            "msgType": "cursorUp",
+            "eventType": "cursorUp",
             "cursorOwner": getName()
         };
         applyEvent(event);
@@ -138,14 +144,14 @@ $(document).ready( function() {
         if (connected) {
             ws.send(JSON.stringify(event))
         } else {
-            if ($.inArray(event["msgType"], ["newCursor", "cursorDown", "cursorMove", "cursorUp"])){
+            if ($.inArray(event["eventType"], ["newCursor", "cursorDown", "cursorMove", "cursorUp"])){
                 bufferedDrawEventList.push(event);
             }
         }
     }
 
     function applyEvent(event){
-        if (event["msgType"] == "newCursor") {
+        if (event["eventType"] == "newCursor") {
             if (!(event["cursorOwner"] in cursors)) {
                 var cursorNameText = new PIXI.Text(event["cursorOwner"], {
                     fontFamily: 'Arial',
@@ -164,10 +170,10 @@ $(document).ready( function() {
             return;
         }
         if (!(event["cursorOwner"] in cursors)){
-            applyEvent({"msgType": "newCursor", "cursorOwner": event["cursorOwner"]});
+            applyEvent({"eventType": "newCursor", "cursorOwner": event["cursorOwner"]});
             applyEvent(event);
         }
-        switch (event["msgType"]) {
+        switch (event["eventType"]) {
             case "bulkDraw":
                 var events = event["events"];
                 events.forEach(function(ev){
@@ -202,7 +208,7 @@ $(document).ready( function() {
                 delete cursors[event["cursorOwner"]];
                 break;
             default:
-                console.log("Unknown message type: " + event["msgType"]);
+                console.log("Unknown message type: " + event["eventType"]);
                 console.log(event);
         }
     }
@@ -218,7 +224,7 @@ $(document).ready( function() {
     }
     function drawCircle(x, y, graphics, color) {
         graphics.beginFill("0x"+color, 0.5);
-        graphics.drawCircle(x, y, 6);
+        graphics.drawCircle(x - 10, y - 10, 6);
         graphics.endFill();
     }
 });

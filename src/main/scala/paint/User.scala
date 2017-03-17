@@ -11,7 +11,7 @@ object User {
   case class OutgoingMessage(text: String)
 }
 
-class User(room: ActorRef) extends Actor {
+class User(room: ActorRef, eventStore: ActorRef) extends Actor {
   import User._
   var name: String = ""
 
@@ -20,32 +20,28 @@ class User(room: ActorRef) extends Actor {
       context.become(connected(outActor))
   }
 
-  def as(state: String): Receive = {
-    case a: String => context.become(as(a))
-  }
-
   def connected(outgoing: ActorRef): Receive = {
     room ! Room.Join(this)
 
     {
       case IncomingMessage(text) =>
-        name = cursorOwner(text)
-        room ! Room.Message(text)
+        name = Parser.parseCursorOwner(text)
+        if (Parser.parseEventType(text) == "getEvents") {
+          eventStore ! self
+        } else {
+          room ! Room.Message(text)
+        }
 
       case messageList: List[Room.Message] =>
-        outgoing ! OutgoingMessage(s"""{"msgType": "bulkDraw", "events": [${messageList.map(_.message).mkString(",")}]}""")
+        outgoing ! OutgoingMessage(s"""{"eventType": "bulkDraw", "events": [${messageList.map(_.message).mkString(",")}]}""")
 
       case Room.Message(text) =>
-        if (cursorOwner(text) != name) {
+        if (Parser.parseCursorOwner(text) != name) {
           outgoing ! OutgoingMessage(text)
         }
 
       case Room.Disconnected(user: User) =>
-        outgoing ! OutgoingMessage(s"""{"msgType": "disconnected", "cursorOwner": "${user.name}"}""")
+        outgoing ! OutgoingMessage(s"""{"eventType": "disconnected", "cursorOwner": "${user.name}"}""")
     }
-  }
-
-  private def cursorOwner(text: String) = {
-    JSON.parseFull(text).get.asInstanceOf[Map[String, Any]]("cursorOwner").asInstanceOf[String]
   }
 }

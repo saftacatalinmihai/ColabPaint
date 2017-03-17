@@ -1,9 +1,8 @@
 $(document).ready( function() {
     // GLOBAL STATE VARIABLES:
     var cursors = {};
-    var pointerDown = false;
 
-    $("#nameInput").val(readCookie("name"))
+    $("#nameInput").val(readCookie("name"));
 
     var app = new PIXI.Application(600, 400,{antialias: true });
     $(".app").append(app.view);
@@ -14,135 +13,134 @@ $(document).ready( function() {
     graphics.lineStyle(0);
     app.stage.addChild(graphics);
 
-    var nameText = new PIXI.Text(getName(), {fontFamily : 'Arial', fontSize: 16, fill : 0xffffff, align : 'center'});
-    nameText.interactive = true;
-    nameText.x = 30;
-    nameText.y = 90;
-    app.stage.addChild(nameText);
+    applyEvent({"msgType": "newCursor", "cursorOwner": getName()});
 
     var ws = new WebSocket("ws://" + window.location.hostname + ":8080/paint");
     ws.onopen = function() {
+        ws.send(JSON.stringify({"msgType": "newCursor", "cursorOwner": getName()}));
         $("#reset").click(function() {
-            resetGraphics(graphics)
-            ws.send(JSON.stringify({
+            var event = {
                 "msgType": "reset",
                 "cursorOwner": getName()
-            }))
+            };
+            applyEvent(event);
+            ws.send(JSON.stringify(event))
         });
         $("#nameInput").keyup(function(){
-            nameText.text = this.value;
-            createCookie("name", this.value, 3);
-            ws.send(JSON.stringify({
+            var event = {
                 "msgType": "updateCursor",
                 "cursorOwner": this.value,
-                "x": nameText.x,
-                "y": nameText.y
-            }));
+                "x": cursors[getName()]["name"].x,
+                "y": cursors[getName()]["name"].y
+            };
+            applyEvent(event);
+            createCookie("name", this.value, 3);
+            ws.send(JSON.stringify(event));
         });
-        nameText.on('pointermove', function(e) {
-            var ev = e.data.originalEvent;
-            nameText.x = ev.pageX;
-            nameText.y = ev.pageY;
-            var data = JSON.stringify({
+        cursors[getName()]["name"].on('pointermove', function(e) {
+            var event = {
                 "msgType": "updateCursor",
                 "cursorOwner": getName(),
-                "x": ev.pageX,
-                "y": ev.pageY
-            });
-            ws.send(data);
+                "x": e.data.originalEvent.pageX,
+                "y": e.data.originalEvent.pageY
+            };
+            applyEvent(event);
+            ws.send(JSON.stringify(event));
         });
         app.stage.on('pointerdown', function(){
-            pointerDown = true;
-            ws.send(JSON.stringify({
+            var event = {
                 "msgType": "cursorDown",
                 "cursorOwner": getName()
-            }))
+            };
+            applyEvent(event);
+            ws.send(JSON.stringify(event))
         });
         app.stage.on('pointermove', function(e) {
-            if (pointerDown) {
-                var x = e.data.originalEvent.pageX;
-                var y = e.data.originalEvent.pageY;
-                drawCircle(x, y, graphics, getColor());
-                ws.send(JSON.stringify({
-                    "msgType": "cursorMove",
-                    "cursorOwner": getName(),
-                    "x": nameText.x,
-                    "y": nameText.y,
-                    "color": getColor()
-                }))
+            var event = {
+                "msgType": "cursorMove",
+                "cursorOwner": getName(),
+                "x": e.data.originalEvent.pageX,
+                "y": e.data.originalEvent.pageY,
+                "color": getColor()
+            };
+            applyEvent(event);
+            if (cursors[getName()]["down"]) {
+                ws.send(JSON.stringify(event))
             }
         });
         app.stage.on('pointerup', function() {
-            pointerDown = false;
-            ws.send(JSON.stringify({
+            var event = {
                 "msgType": "cursorUp",
                 "cursorOwner": getName()
-            }))
+            };
+            applyEvent(event);
+            ws.send(JSON.stringify(event))
         });
 
         ws.onmessage = function(e) {
             // console.log(e);
             var data = JSON.parse(e.data);
             // console.log(data);
-            var msgType = data["msgType"];
             var cursorOwner = data["cursorOwner"];
             if (cursorOwner == getName()) {return}
 
-            var cursorNameText;
-            if (!(cursorOwner in cursors)) {
-                cursorNameText = new PIXI.Text(cursorOwner, {
-                    fontFamily: 'Arial',
-                    fontSize: 16,
-                    fill: 0xffffff,
-                    align: 'center'
-                });
-                cursorNameText.interactive = true;
-                app.stage.addChild(cursorNameText);
-
-                cursors[cursorOwner] = {
-                    "name": cursorNameText,
-                    "down": false
-                };
-            } else {
-                cursorNameText = cursors[cursorOwner]["name"];
-            }
-            applyEvent(msgType, data, cursorOwner, cursorNameText)
-
+            applyEvent(data)
         };
     };
-    function applyEvent(msgType, data, cursorOwner, cursorNameText){
-        switch (msgType) {
+    function applyEvent(event){
+        switch (event["msgType"]) {
+            case "newCursor":
+                if (!(event["cursorOwner"] in cursors)) {
+                    var cursorNameText = new PIXI.Text(event["cursorOwner"], {
+                        fontFamily: 'Arial',
+                        fontSize: 16,
+                        fill: 0xffffff,
+                        align: 'center'
+                    });
+                    cursorNameText.interactive = true;
+                    app.stage.addChild(cursorNameText);
+
+                    cursors[event["cursorOwner"]] = {
+                        "name": cursorNameText,
+                        "down": false
+                    };
+                }
+                break;
             case "bulkDraw":
-                var events = data["events"];
+                var events = event["events"];
                 events.forEach(function(ev){
-                    applyEvent(ev["msgType"], ev, cursorOwner, cursorNameText)
+                    applyEvent(ev, cursors)
                 });
                 break;
+            case "reset":
+                resetGraphics(graphics);
+                break;
             case "updateCursor":
-                cursorNameText.x = data["x"];
-                cursorNameText.y = data["y"];
+                cursors[event["cursorOwner"]]["name"].text = event["cursorOwner"];
+                cursors[event["cursorOwner"]]["name"].x = event["x"];
+                cursors[event["cursorOwner"]]["name"].y = event["y"];
                 break;
             case "cursorDown":
-                cursors[cursorOwner]["down"] = true;
+                cursors[event["cursorOwner"]]["down"] = true;
                 break;
             case "cursorMove":
-                if (cursors[cursorOwner]["down"] == true) {
-                    var x = data["x"];
-                    var y = data["y"];
-                    var color = data["color"];
+                if (cursors[event["cursorOwner"]]["down"] == true) {
+                    var x = event["x"];
+                    var y = event["y"];
+                    var color = event["color"];
                     drawCircle(x, y, graphics, color)
                 }
                 break;
             case "cursorUp":
-                cursors[cursorOwner]["down"] = false;
+                cursors[event["cursorOwner"]]["down"] = false;
                 break;
             case "disconnected":
-                cursorNameText = cursors[cursorOwner];
-                cursorNameText.destroy();
-                delete cursors[cursorOwner];
+                cursors[event["cursorOwner"]]["name"] = cursors[event["cursorOwner"]];
+                cursors[event["cursorOwner"]]["name"].destroy();
+                delete cursors[event["cursorOwner"]];
                 break;
             default:
-                console.log("Unknown message type: " + msgType)
+                console.log("Unknown message type: " + event["msgType"])
         }
     }
     function resetGraphics(graphics){

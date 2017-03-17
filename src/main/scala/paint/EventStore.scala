@@ -57,7 +57,7 @@ class EventStore extends PersistentActor {
 
   private def sendDrawEventsTo(user: ActorRef): Unit = {
     val drawEvents = events.filter { case (evType, _) =>
-      List("cursorDown", "cursorMove", "cursorUp").contains(evType)
+      List("newCursor", "cursorDown", "cursorMove", "cursorUp").contains(evType)
     }
     println(s"Sending ${drawEvents.length} events to user")
     user ! drawEvents.reverse.map(ev => Room.Message(ev._2))

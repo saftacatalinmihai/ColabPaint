@@ -2,7 +2,7 @@ package paint
 
 import akka.actor.ActorRef
 import akka.persistence.PersistentActor
-import Parser._
+import paint.Parser._
 /**
   * Created by casafta on 15/3/2017.
   */
@@ -47,7 +47,7 @@ class EventStore extends PersistentActor {
       List("bulkDraw", "newCursor", "cursorDown", "cursorMove", "cursorUp", "disconnected").contains(evType)
     }
     println(s"Sending ${drawEvents.length} events to user")
-    user ! drawEvents.reverse.map(ev => Room.Message(ev._2))
+    user ! drawEvents.reverse.map(ev => Room.Event(ev._2))
 //    drawEvents.reverse.foreach(ev => user ! Room.Message(ev._2))
   }
 

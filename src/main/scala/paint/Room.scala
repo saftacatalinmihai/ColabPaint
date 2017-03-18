@@ -5,7 +5,7 @@ import akka.actor._
 object Room {
   case class Join(user: User)
   case class Disconnected(user: User)
-  case class Message(message: String)
+  case class Event(event: String)
 }
 
 class Room extends Actor {
@@ -25,7 +25,7 @@ class Room extends Actor {
           users.foreach(_._1 ! Disconnected(user))
       }
 
-    case msg: Message =>
+    case msg: Event =>
       users.foreach(_._1 ! msg)
   }
 }

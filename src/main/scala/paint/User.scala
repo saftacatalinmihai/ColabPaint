@@ -1,12 +1,12 @@
 package paint
 
 import akka.actor.{Actor, ActorRef}
-import Parser._
+import paint.Parser._
 
 object User {
   case class Connected(outActor: ActorRef)
-  case class IncomingMessage(event: String)
-  case class OutgoingMessage(event: String)
+  case class IncomingEvent(event: String)
+  case class OutgoingEvent(event: String)
 }
 
 class User(room: ActorRef, eventStore: ActorRef) extends Actor {
@@ -22,24 +22,24 @@ class User(room: ActorRef, eventStore: ActorRef) extends Actor {
     room ! Room.Join(this)
 
     {
-      case IncomingMessage(event) =>
+      case IncomingEvent(event) =>
         name = event.get("cursorOwner")
         if (event.get[String]("eventType") == "getEvents") {
           eventStore ! self
         } else {
-          room ! Room.Message(event)
+          room ! Room.Event(event)
         }
 
-      case messageList: List[Room.Message] =>
-        outgoing ! OutgoingMessage(s"""{"eventType": "bulkDraw", "events": [${messageList.map(_.message).mkString(",")}]}""")
+      case eventList: List[Room.Event] =>
+        outgoing ! OutgoingEvent(s"""{"eventType": "bulkDraw", "events": [${eventList.map(_.event).mkString(",")}]}""")
 
-      case Room.Message(event) =>
+      case Room.Event(event) =>
         if (event.get[String]("cursorOwner") != name) {
-          outgoing ! OutgoingMessage(event)
+          outgoing ! OutgoingEvent(event)
         }
 
       case Room.Disconnected(user: User) =>
-        outgoing ! OutgoingMessage(s"""{"eventType": "disconnected", "cursorOwner": "${user.name}"}""")
+        outgoing ! OutgoingEvent(s"""{"eventType": "disconnected", "cursorOwner": "${user.name}"}""")
     }
   }
 }

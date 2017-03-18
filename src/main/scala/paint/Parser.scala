@@ -10,5 +10,5 @@ object Parser {
   class Parse(event:String){
     def get[T](key: String): T = JSON.parseFull(event).get.asInstanceOf[Map[String, Any]](key).asInstanceOf[T]
   }
-  implicit def toParsed(event: String): Parse = new Parse(event)
+  implicit def toParse(event: String): Parse = new Parse(event)
 }

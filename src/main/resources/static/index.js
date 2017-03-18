@@ -55,13 +55,13 @@ $(document).ready( function() {
                 window.timerID=0;
             }
             connected = true;
-            if (bufferedDrawEventList.length > 0) {
-                sendEvent({"eventType": "bulkDraw", "cursorOwner": getName(), "events": bufferedDrawEventList});
-                bufferedDrawEventList = [];
-            }
             if (firstConnect) {
                 sendEvent({"eventType": "getEvents", "cursorOwner": getName()});
                 firstConnect = false;
+            }
+            if (bufferedDrawEventList.length > 0) {
+                sendEvent({"eventType": "bulkDraw", "cursorOwner": getName(), "events": bufferedDrawEventList});
+                bufferedDrawEventList = [];
             }
         };
         ws.onmessage = function(e) {

@@ -25,7 +25,7 @@ class EventStore extends PersistentActor {
   def updateState(event: Event): Unit = {
     val (eventType, ev) = Parser.parseEventType(event) -> event
     if (eventType == "reset") {
-      canvases = events :: canvases
+//      canvases = events :: canvases
       events = List.empty
     } else {
       events = eventType -> ev :: events

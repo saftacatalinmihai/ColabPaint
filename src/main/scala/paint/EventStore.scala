@@ -2,7 +2,7 @@ package paint
 
 import akka.actor.ActorRef
 import akka.persistence.PersistentActor
-
+import Parser._
 /**
   * Created by casafta on 15/3/2017.
   */
@@ -23,7 +23,7 @@ class EventStore extends PersistentActor {
   override def persistenceId: String = "id-1"
 
   def updateState(event: Event): Unit = {
-    val (eventType, ev) = Parser.parseEventType(event) -> event
+    val (eventType, ev) = event.get[String]("eventType") -> event
     if (eventType == "reset") {
 //      canvases = events :: canvases
       events = List.empty

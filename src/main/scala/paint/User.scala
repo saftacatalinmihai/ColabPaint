@@ -1,11 +1,12 @@
 package paint
 
 import akka.actor.{Actor, ActorRef}
+import Parser._
 
 object User {
   case class Connected(outActor: ActorRef)
-  case class IncomingMessage(text: String)
-  case class OutgoingMessage(text: String)
+  case class IncomingMessage(event: String)
+  case class OutgoingMessage(event: String)
 }
 
 class User(room: ActorRef, eventStore: ActorRef) extends Actor {
@@ -21,20 +22,20 @@ class User(room: ActorRef, eventStore: ActorRef) extends Actor {
     room ! Room.Join(this)
 
     {
-      case IncomingMessage(text) =>
-        name = Parser.parseCursorOwner(text)
-        if (Parser.parseEventType(text) == "getEvents") {
+      case IncomingMessage(event) =>
+        name = event.get("cursorOwner")
+        if (event.get[String]("eventType") == "getEvents") {
           eventStore ! self
         } else {
-          room ! Room.Message(text)
+          room ! Room.Message(event)
         }
 
       case messageList: List[Room.Message] =>
         outgoing ! OutgoingMessage(s"""{"eventType": "bulkDraw", "events": [${messageList.map(_.message).mkString(",")}]}""")
 
-      case Room.Message(text) =>
-        if (Parser.parseCursorOwner(text) != name) {
-          outgoing ! OutgoingMessage(text)
+      case Room.Message(event) =>
+        if (event.get[String]("cursorOwner") != name) {
+          outgoing ! OutgoingMessage(event)
         }
 
       case Room.Disconnected(user: User) =>

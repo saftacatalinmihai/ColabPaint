@@ -27,9 +27,9 @@ object Server {
       val incomingMessages: Sink[Message, NotUsed] =
         Flow[Message].map {
           // transform websocket message to domain message
-          case TextMessage.Strict(text) =>
-            evStore ! text
-            User.IncomingMessage(text)
+          case TextMessage.Strict(event) =>
+            evStore ! event
+            User.IncomingMessage(event)
         }.to(Sink.actorRef[User.IncomingMessage](userActor, PoisonPill))
 
       val outgoingMessages: Source[Message, NotUsed] =
@@ -40,7 +40,7 @@ object Server {
             NotUsed
           }.map(
           // transform domain message to web socket message
-          (outMsg: User.OutgoingMessage) => TextMessage(outMsg.text))
+          (outMsg: User.OutgoingMessage) => TextMessage(outMsg.event))
 
 
       // then combine both to a flow

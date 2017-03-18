@@ -62,8 +62,7 @@ $(document).ready( function() {
             if (bufferedDrawEventList.length > 0) {
                 sendEvent({"eventType": "bulkDraw", "cursorOwner": getName(), "events": bufferedDrawEventList});
                 bufferedDrawEventList = [];
-            }
-        };
+            }        };
         ws.onmessage = function(e) {
             // console.log(e);
             var data = JSON.parse(e.data);
@@ -90,8 +89,7 @@ $(document).ready( function() {
             "eventType": "reset",
             "cursorOwner": getName()
         };
-        applyEvent(event);
-        sendEvent(event)
+        applyAndSend(event);
     });
     nameInput.keyup(function(){
         createCookie("name", this.value, 3);
@@ -99,8 +97,7 @@ $(document).ready( function() {
             "eventType": "updateCursor",
             "cursorOwner": this.value
         };
-        applyEvent(event);
-        sendEvent(event);
+        applyAndSend(event);
     });
     cursors[getName()]["name"].on('pointermove', function(e) {
         var event = {
@@ -109,16 +106,14 @@ $(document).ready( function() {
             "x": e.data.originalEvent.pageX,
             "y": e.data.originalEvent.pageY
         };
-        applyEvent(event);
-        sendEvent(event);
+        applyAndSend(event);
     });
     app.stage.on('pointerdown', function(){
         var event = {
             "eventType": "cursorDown",
             "cursorOwner": getName()
         };
-        applyEvent(event);
-        sendEvent(event)
+        applyAndSend(event);
     });
     app.stage.on('pointermove', function(e) {
         var event = {
@@ -138,9 +133,13 @@ $(document).ready( function() {
             "eventType": "cursorUp",
             "cursorOwner": getName()
         };
-        applyEvent(event);
-        sendEvent(event)
+        applyAndSend(event);
     });
+
+    function applyAndSend(event) {
+        applyEvent(event);
+        sendEvent(event);
+    }
 
     function sendEvent(event){
         if (connected) {

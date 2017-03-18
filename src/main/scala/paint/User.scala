@@ -3,7 +3,6 @@ package paint
 import akka.actor.{Actor, ActorRef}
 
 object User {
-  type Id = String
   case class Connected(outActor: ActorRef)
   case class IncomingMessage(text: String)
   case class OutgoingMessage(text: String)

@@ -108,10 +108,13 @@ $(document).ready( function() {
         };
         applyAndSend(event);
     });
-    app.stage.on('pointerdown', function(){
+    app.stage.on('pointerdown', function(e){
         var event = {
             "eventType": "cursorDown",
-            "cursorOwner": getName()
+            "cursorOwner": getName(),
+            "x": e.data.originalEvent.pageX,
+            "y": e.data.originalEvent.pageY,
+            "color": getColor()
         };
         applyAndSend(event);
     });
@@ -187,13 +190,11 @@ $(document).ready( function() {
                 break;
             case "cursorDown":
                 cursors[event["cursorOwner"]]["down"] = true;
+                drawCircle(event["x"], event["y"], graphics, event["color"])
                 break;
             case "cursorMove":
                 if (cursors[event["cursorOwner"]]["down"] == true) {
-                    var x = event["x"];
-                    var y = event["y"];
-                    var color = event["color"];
-                    drawCircle(x, y, graphics, color)
+                    drawCircle(event["x"], event["y"], graphics, event["color"])
                 }
                 break;
             case "cursorUp":

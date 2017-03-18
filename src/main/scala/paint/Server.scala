@@ -48,20 +48,16 @@ object Server {
     }
 
     val route =
-      // TODO: surely there's a better way of serving static files
       path("paint") {
         get {
           handleWebSocketMessages(newUser())
         }
       } ~
-      path("jscolor.min.js") {
-        getFromResource("jscolor.min.js")
-      } ~
-      path("index.js") {
-        getFromResource("index.js")
-      } ~
-      getFromResource("index.html")
-
+      pathPrefix("static") {
+        encodeResponse {
+          getFromResourceDirectory("static")
+        }
+      } ~ getFromResource("static/index.html")
     val binding = Await.result(Http().bindAndHandle(route, "0.0.0.0", 8080), 3.seconds)
 
     // the rest of the sample code will go here

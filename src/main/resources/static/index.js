@@ -68,8 +68,8 @@ $(document).ready( function() {
             var data = JSON.parse(e.data);
             // console.log(data);
             var cursorOwner = data["cursorOwner"];
-            if (cursorOwner == getName()) {return}
-            applyEvent(data)
+            if (cursorOwner != getName()) { applyEvent(data) }
+
         };
         ws.onclose = function(){
             if(!window.timerID){ /* avoid firing a new setInterval, after one has been done */

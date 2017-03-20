@@ -1,31 +1,29 @@
 package paint
 
-import akka.actor._
+import akka.actor.{Actor, ActorRef, Terminated}
 
-object Room {
-  case class Join(user: User)
-  case class Disconnected(user: User)
-  case class Event(event: String)
+/**
+  * Created by casafta on 20/3/2017.
+  */
+case object Room {
+  case class Event(ev: String)
+  case object Join
 }
 
 class Room extends Actor {
   import Room._
-  var users: Set[(ActorRef, User)] = Set.empty
+  var users: Set[ActorRef] = Set.empty
 
-  def receive: Receive = {
-    case Join(user) =>
-      users += ((sender(), user))
-      // we also would like to remove the user when its actor is stopped
-      context.watch(sender())
+  override def receive = {
+    case Join =>
+      users += sender()
+      context watch sender()
 
     case Terminated(userActor) =>
-      users.find(_._1.equals(userActor)) foreach {
-        case (userActorRef, user) =>
-          users -= ((userActorRef, user))
-          users.foreach(_._1 ! Disconnected(user))
-      }
+      users -= userActor
 
-    case msg: Event =>
-      users.foreach(_._1 ! msg)
+    case ev: Event =>
+      users.foreach(_ ! ev)
   }
+
 }

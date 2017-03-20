@@ -33,7 +33,7 @@ object Server {
         }.to(Sink.actorRef[User.IncomingEvent](userActor, PoisonPill))
 
       val outgoingMessages: Source[Message, NotUsed] =
-        Source.actorRef[User.OutgoingEvent](10000, OverflowStrategy.fail)
+        Source.actorRef[User.OutgoingEvent](1000, OverflowStrategy.dropHead)
           .mapMaterializedValue { outActor =>
             // give the user actor a way to send messages out
             userActor ! User.Connected(outActor)

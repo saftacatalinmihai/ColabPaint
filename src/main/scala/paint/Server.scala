@@ -17,8 +17,8 @@ object Server {
     implicit val system = ActorSystem()
     implicit val materializer = ActorMaterializer()
 
-    val room    = system.actorOf(Props(new Room), "room")
-    val evStore = system.actorOf(Props(new EventStore), "eventStore")
+    val room    = system.actorOf(Props[Room], "room")
+    val evStore = system.actorOf(Props[EventStore], "eventStore")
 
     def newUser(): Flow[Message, Message, NotUsed] = {
       // new connection - new user actor

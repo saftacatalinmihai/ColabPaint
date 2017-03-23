@@ -48,7 +48,7 @@ class EventStore extends PersistentActor {
     }
     println(s"Sending ${drawEvents.length} events to user")
     user ! drawEvents.reverse.map(ev => Room.Event(ev._2))
-//    drawEvents.reverse.foreach(ev => user ! Room.Message(ev._2))
+//    drawEvents.reverse.foreach(ev => user ! Room.Event(ev._2))
   }
 
 }
